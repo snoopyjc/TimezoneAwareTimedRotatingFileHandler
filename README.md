@@ -1,2 +1,2 @@
 # TimezoneAwareTimedRotatingFileHandler
-For python logging, a TImedRotatingFileHandler that obeys time zones
+For python logging, a TimedRotatingFileHandler that obeys time zones
