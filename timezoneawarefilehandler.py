@@ -4,7 +4,6 @@ from datetime import datetime, timedelta, timezone
 from datetime import time as dt_time
 import pytz
 from logging.handlers import TimedRotatingFileHandler, _MIDNIGHT
-​
 class TimezoneAwareTimedRotatingFileHandler(TimedRotatingFileHandler):
     """
     Handler for logging to a file, rotating the log file at certain timed
@@ -32,7 +31,7 @@ class TimezoneAwareTimedRotatingFileHandler(TimedRotatingFileHandler):
         #
         # Case of the 'when' specifier is not important; lower or upper case
         # will work.
-​
+
     def _tz_dst_adjust(self, currentTime, newRolloverAt):
         """If currentTime and newRolloverAt spans a DST adjustment, perform that adjustment to
         newRolloverAt"""
@@ -99,16 +98,17 @@ class TimezoneAwareTimedRotatingFileHandler(TimedRotatingFileHandler):
                     atTime = self.atTime
                 
                 rotate_dt = self.roundUpToTime(tz_dt, atTime)
-                #print(tz_dt, rotate_dt)
-                rotate_dt = pytz.utc.normalize(rotate_dt.astimezone(pytz.utc))    # convert back to utc
-                #print(tz_dt_utc, rotate_dt)
-                delta = rotate_dt - tz_dt_utc
+                #print("tz_dt, rotate_dt = ", tz_dt, rotate_dt)
+                rotate_dt_utc = pytz.utc.normalize(rotate_dt.astimezone(pytz.utc))    # convert back to utc
+                #print("tz_dt_utc, rotate_dt_utc = ", tz_dt_utc, rotate_dt_utc)
+                delta = rotate_dt_utc - tz_dt_utc
                 delta = int(delta.total_seconds())
                 rotate_ts = delta + ((currentHour * 60 + currentMinute) * 60 + currentSecond)
                 
                 #print(f'delta = {delta}, rotate_ts = {rotate_ts}')
                 if self.when.startswith('W') and self.atTime is not None:
-                    currentDay = time.gmtime(currentTime + delta)[6]    # Recompute it for the result time
+                    #currentDay = time.gmtime(currentTime + delta)[6]    # Recompute it for the result time
+                    currentDay = rotate_dt.weekday()    # Recompute it for the result time in proper timezone
 ​
             r = rotate_ts - ((currentHour * 60 + currentMinute) * 60 +
                 currentSecond)
@@ -136,14 +136,17 @@ class TimezoneAwareTimedRotatingFileHandler(TimedRotatingFileHandler):
             # This is because the above time calculation takes us to midnight on this
             # day, i.e. the start of the next day.
             if self.when.startswith('W'):
-                day = (currentDay + 1) % 7
-                dow = (self.dayOfWeek + 1) % 7    # We really rollover at midnight on the next day
+                day = currentDay
+                dow = self.dayOfWeek
+                if self.atTime is None:
+                    day = (currentDay + 1) % 7
+                    dow = (self.dayOfWeek + 1) % 7    # We really rollover at midnight on the next day
                 if day != dow:
                     if day < dow:
                         daysToWait = dow - day
                     else:
                         daysToWait = 6 - day + dow + 1
-                    # print(f'day = {day}, dow = {dow}, daysToWait = {daysToWait}')
+                    #print(f'day = {day}, dow = {dow}, daysToWait = {daysToWait}')
                     newRolloverAt = result + (daysToWait * (60 * 60 * 24))
                     if not self.utc:
                         dstNow = t[-1]
@@ -158,7 +161,7 @@ class TimezoneAwareTimedRotatingFileHandler(TimedRotatingFileHandler):
                         newRolloverAt = self._tz_dst_adjust(result, newRolloverAt)
                     result = newRolloverAt
         return result
-​
+
     def doRollover(self):
         """
         do a rollover; in this case, a date/time stamp is appended to the filename
@@ -199,6 +202,7 @@ class TimezoneAwareTimedRotatingFileHandler(TimedRotatingFileHandler):
         while newRolloverAt <= currentTime:
             newRolloverAt = newRolloverAt + self.interval
         #If DST changes and midnight or weekly rollover, adjust for this.
+#       This code commented out because computeRollover already handles this for us:
 #       if (self.when == 'MIDNIGHT' or self.when.startswith('W')) and self.utc and self.tzinfo is not None:
 #           newRolloverAt = self._tz_dst_adjust(currentTime, newRolloverAt)
         if (self.when == 'MIDNIGHT' or self.when.startswith('W')) and not self.utc:
