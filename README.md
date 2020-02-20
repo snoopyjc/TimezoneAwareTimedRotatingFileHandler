@@ -7,5 +7,6 @@ Usage:
     from timezoneawarefilehandler import TimezoneAwareTimedRotatingFileHandler
     
     central = pytz.timezone("America/Chicago")
+    # Rotate the log daily at Midnight Central Time:
     central_handler = TimezoneAwareTimedRotatingFileHandler('mylog', when='midnight',
                                                         backupCount=30, tzinfo=central)
