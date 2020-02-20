@@ -2,7 +2,8 @@ import pytz
 import time
 from datetime import datetime, timedelta
 import os
-​
+from timzeoneawarefilehandler import TimezoneAwareTimedRotatingFileHandler
+
 @pytest.fixture
 def nopytestLog():    # Remove any generated log rollover files
     yield
@@ -26,9 +27,7 @@ def test_timezone_logger(monkeypatch, nopytestLog, zone):
                                             tzinfo=central)
     central_monday_5pm_handler = TimezoneAwareTimedRotatingFileHandler('pytestLog', when='W0',
                                             tzinfo=central, atTime=dt_time(17, 0, 0))
-​
-​
-​
+
     _DAY_PLUS_HOUR_MINUTE = 24 * 60 * 60 + 60 * 60 + 60
     
     testTime = central.localize(datetime(year=2020, month=2, day=1, hour=0)).timestamp()
@@ -47,7 +46,7 @@ def test_timezone_logger(monkeypatch, nopytestLog, zone):
         return whats_the_time
     
     monkeypatch.setattr(time, 'time', mock_time)
-​
+
     times = (*times, mar_7, mar_8, oct_31, nov_1, dec_31)
     tadjm = [*zeros, 0, -3600, 0, 3600, 0]
     if central.dst(oct_31_dt_naive) == timedelta(0):   # This timezone doesn't have DST
@@ -61,7 +60,7 @@ def test_timezone_logger(monkeypatch, nopytestLog, zone):
         
         dt = pytz.utc.localize(datetime.utcfromtimestamp(roll))
         dt = central.normalize(dt.astimezone(central))
-​
+
         #print(og, dt)
         assert dt.hour == 0 and dt.minute == 0 and dt.second == 0 and dt.microsecond == 0
         assert dt > og
