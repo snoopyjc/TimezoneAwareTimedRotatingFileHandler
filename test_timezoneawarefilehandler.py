@@ -1,10 +1,8 @@
-import pytest
 import pytz
 import time
 from datetime import datetime, timedelta
 import os
 from timezoneawarefilehandler import TimezoneAwareTimedRotatingFileHandler
-
 @pytest.fixture
 def nopytestLog():    # Remove any generated log rollover files
     yield
@@ -14,10 +12,10 @@ def nopytestLog():    # Remove any generated log rollover files
             os.remove(ptl)
         except Exception:
             pass
-
-def test_timezone_logger(monkeypatch, nopytestLog):
-    # test cases
-    central = pytz.timezone('America/Chicago')
+        
+@pytest.mark.parametrize("zone", ["America/Chicago", "America/New_York", "America/Los_Angeles", "UTC"])
+def test_timezone_logger(monkeypatch, nopytestLog, zone):
+    central = pytz.timezone(zone)
     handler = TimedRotatingFileHandler('test', when='midnight', utc=True)
     new_handler = TimezoneAwareTimedRotatingFileHandler('pytestLog', when='midnight', utc=True, tzinfo=None)
     central_handler = TimezoneAwareTimedRotatingFileHandler('pytestLog', when='midnight', utc=True, 
@@ -29,33 +27,30 @@ def test_timezone_logger(monkeypatch, nopytestLog):
     central_monday_5pm_handler = TimezoneAwareTimedRotatingFileHandler('pytestLog', when='W0', utc=True,
                                             tzinfo=central, atTime=dt_time(17, 0, 0))
 
-    _DAY = 24 * 60 * 60
-    currentTime = int(time.time())
-    og = pytz.utc.localize(datetime.utcfromtimestamp(currentTime))
-    og = central.normalize(og.astimezone(central))
-    if og.month == 3 and og.day <= 8:   # ensure currentTime not near a DST change day
-        currentTime += _DAY * 15
-    elif (og.month == 10 and og.day >= 21) or (og.month == 11 and og.day == 1):
-        currentTime += _DAY * 15
-
-    times = [currentTime + i * _DAY for i in range(8)]
-    zeros = [0 for i in range(8)]
+    _DAY_PLUS_HOUR_MINUTE = 24 * 60 * 60 + 60 * 60 + 60
+    
+    testTime = central.localize(datetime(year=2020, month=2, day=1, hour=0)).timestamp()
+    times = [testTime + i * _DAY_PLUS_HOUR_MINUTE for i in range(24)]
+    zeros = [0 for i in range(24)]
     mar_7 = central.localize(datetime(year=2020, month=3, day=7, hour=8)).timestamp()
     mar_8 = central.localize(datetime(year=2020, month=3, day=8, hour=0)).timestamp()
-    oct_31 = central.localize(datetime(year=2020, month=10, day=31, hour=4)).timestamp()
+    oct_31_dt_naive = datetime(year=2020, month=10, day=31, hour=4)
+    oct_31 = central.localize(oct_31_dt_naive).timestamp()
     nov_1 = central.localize(datetime(year=2020, month=11, day=1, hour=0)).timestamp()
     dec_31 = central.localize(datetime(year=2020, month=12, day=31, hour=23, minute=59)).timestamp()
     
-    old_time_func = time.time
     whats_the_time = time.time()
     def mock_time():
         nonlocal whats_the_time
         return whats_the_time
     
     monkeypatch.setattr(time, 'time', mock_time)
-
+​
     times = (*times, mar_7, mar_8, oct_31, nov_1, dec_31)
-    tadjm = (*zeros, 0, -3600, 0, 3600, 0)
+    tadjm = [*zeros, 0, -3600, 0, 3600, 0]
+    if central.dst(oct_31_dt_naive) == timedelta(0):   # This timezone doesn't have DST
+        tadjm[-2] = 0
+        tadjm[-4] = 0
     for ndx, tm in enumerate(times):
         assert handler.computeRollover(tm) == new_handler.computeRollover(tm)
         roll = central_handler.computeRollover(tm)
@@ -64,7 +59,7 @@ def test_timezone_logger(monkeypatch, nopytestLog):
         
         dt = pytz.utc.localize(datetime.utcfromtimestamp(roll))
         dt = central.normalize(dt.astimezone(central))
-
+​
         #print(og, dt)
         assert dt.hour == 0 and dt.minute == 0 and dt.second == 0 and dt.microsecond == 0
         assert dt > og
@@ -89,6 +84,7 @@ def test_timezone_logger(monkeypatch, nopytestLog):
         roll = central_monday_5pm_handler.computeRollover(tm)
         dt = pytz.utc.localize(datetime.utcfromtimestamp(roll))
         dt = central.normalize(dt.astimezone(central))
+        #print("og, dt =", og, dt)
         assert dt.hour == 17 and dt.minute == 0 and dt.second == 0 and dt.microsecond == 0
         assert dt > og
         assert dt.weekday() == 0    # Monday
