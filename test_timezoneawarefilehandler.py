@@ -2,7 +2,7 @@ import pytz
 import time
 from datetime import datetime, timedelta
 import os
-from timezoneawarefilehandler import TimezoneAwareTimedRotatingFileHandler
+​
 @pytest.fixture
 def nopytestLog():    # Remove any generated log rollover files
     yield
@@ -18,15 +18,17 @@ def test_timezone_logger(monkeypatch, nopytestLog, zone):
     central = pytz.timezone(zone)
     handler = TimedRotatingFileHandler('test', when='midnight', utc=True)
     new_handler = TimezoneAwareTimedRotatingFileHandler('pytestLog', when='midnight', utc=True, tzinfo=None)
-    central_handler = TimezoneAwareTimedRotatingFileHandler('pytestLog', when='midnight', utc=True, 
+    central_handler = TimezoneAwareTimedRotatingFileHandler('pytestLog', when='midnight',
                                                         backupCount=1, tzinfo=central)
-    central_4pm_handler = TimezoneAwareTimedRotatingFileHandler('pytestLog', when='midnight', utc=True, 
+    central_4pm_handler = TimezoneAwareTimedRotatingFileHandler('pytestLog', when='midnight',
                                             tzinfo=central, atTime=dt_time(16, 0, 0))
-    central_monday_handler = TimezoneAwareTimedRotatingFileHandler('pytestLog', when='W0', utc=True,
+    central_monday_handler = TimezoneAwareTimedRotatingFileHandler('pytestLog', when='W0',
                                             tzinfo=central)
-    central_monday_5pm_handler = TimezoneAwareTimedRotatingFileHandler('pytestLog', when='W0', utc=True,
+    central_monday_5pm_handler = TimezoneAwareTimedRotatingFileHandler('pytestLog', when='W0',
                                             tzinfo=central, atTime=dt_time(17, 0, 0))
-
+​
+​
+​
     _DAY_PLUS_HOUR_MINUTE = 24 * 60 * 60 + 60 * 60 + 60
     
     testTime = central.localize(datetime(year=2020, month=2, day=1, hour=0)).timestamp()
