@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, timezone
 from datetime import time as dt_time
 import pytz
 from logging.handlers import TimedRotatingFileHandler, _MIDNIGHT
+​
 class TimezoneAwareTimedRotatingFileHandler(TimedRotatingFileHandler):
     """
     Handler for logging to a file, rotating the log file at certain timed
@@ -18,6 +19,8 @@ class TimezoneAwareTimedRotatingFileHandler(TimedRotatingFileHandler):
                  encoding=None, delay=False, utc=False, atTime=None,
                  errors=None, tzinfo=None):
         self.tzinfo = tzinfo
+        if tzinfo is not None:
+            utc = True
         TimedRotatingFileHandler.__init__(self, filename, when=when, encoding=encoding, backupCount=backupCount,
                                      delay=delay, utc=utc, atTime=atTime, #errors=errors)  in python 3.9 only
                                          )
@@ -31,7 +34,7 @@ class TimezoneAwareTimedRotatingFileHandler(TimedRotatingFileHandler):
         #
         # Case of the 'when' specifier is not important; lower or upper case
         # will work.
-
+​
     def _tz_dst_adjust(self, currentTime, newRolloverAt):
         """If currentTime and newRolloverAt spans a DST adjustment, perform that adjustment to
         newRolloverAt"""
@@ -161,7 +164,7 @@ class TimezoneAwareTimedRotatingFileHandler(TimedRotatingFileHandler):
                         newRolloverAt = self._tz_dst_adjust(result, newRolloverAt)
                     result = newRolloverAt
         return result
-
+​
     def doRollover(self):
         """
         do a rollover; in this case, a date/time stamp is appended to the filename
