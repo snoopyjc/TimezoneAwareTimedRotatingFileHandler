@@ -3,7 +3,7 @@ import pytz
 import time
 from datetime import datetime, timedelta
 import os
-from timezoneawarefilehandler import TimezoneAwareTimedRoatingFileHandler
+from timezoneawarefilehandler import TimezoneAwareTimedRotatingFileHandler
 
 @pytest.fixture
 def nopytestLog():    # Remove any generated log rollover files
